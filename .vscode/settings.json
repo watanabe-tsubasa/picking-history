@@ -1,0 +1,10 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "pick-history-summrizer/src-tauri/Cargo.toml"
+  ],
+  "editor.quickSuggestions": {
+    "other": "on",
+    "comments": "off",
+    "strings": "on"
+  }
+}
