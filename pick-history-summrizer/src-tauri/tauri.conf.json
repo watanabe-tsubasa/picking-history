@@ -13,6 +13,12 @@
     "allowlist": {
       "fs": {
         "all": true
+      },
+      "dialog": {
+        "all": true
+      },
+      "path": {
+        "all": true
       }
     },
     "bundle": {
@@ -30,7 +36,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.pick.prod",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -57,7 +63,7 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 800,
         "resizable": true,
         "title": "pick-history-summrizer",
         "width": 800,

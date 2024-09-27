@@ -1,38 +1,57 @@
 import React, { useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import path from 'path';
 
-const FileDropZone = () => {
-  const [filePath, setFilePath] = useState<string | null>(null);
+interface FileDropZoneProps {
+  filePath: string | null;
+  errorMessage: string | null;
+}
+
+const FileDropZone: React.FC<FileDropZoneProps> = ({ filePath, errorMessage }) => {
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    // Tauri のファイルドロップイベントをリッスン
-    const unlisten = listen('tauri://file-drop', (event) => {
+    const unlistenDropHover = listen('tauri://file-drop-hover', () => {
+      setIsHovered(true);
+      console.log('File Hovered');
+    });
+
+    const unlistenDropCancelled = listen('tauri://file-drop-cancelled', () => {
+      setIsHovered(false); 
+      console.log('File Drop Cancelled');
+    });
+
+    const unlistenDrop = listen('tauri://file-drop', (event) => {
       const paths = event.payload as string[];
       if (paths && paths.length > 0) {
-        console.log('File dropped:', paths[0]);
-        setFilePath(paths[0]);  // ドロップされた最初のファイルパスを使用
+        setIsHovered(false);
+        console.log('File Dropped:', paths[0]);
       }
     });
 
+    // クリーンアップ
     return () => {
-      unlisten.then((fn) => fn());
+      unlistenDropHover.then((unlisten) => unlisten());
+      unlistenDropCancelled.then((unlisten) => unlisten());
+      unlistenDrop.then((unlisten) => unlisten());
     };
   }, []);
 
   return (
     <div
-      style={{
-        border: '2px dashed #ccc',
-        padding: '20px',
-        textAlign: 'center',
-      }}
+      className={`border-2 border-dashed px-10 py-4 text-center w-full transition-colors ${
+        isHovered ? 'border-gray-500 bg-gray-100' : 'border-gray-300'
+      }`}
     >
-      {filePath ? (
-        <p>ファイルパス: {filePath}</p>
-      ) : (
-        <p>ここにファイルをドラッグ＆ドロップしてください</p>
-      )}
+      <div className='min-h-24 flex flex-col justify-center items-center'>
+        {filePath ? (
+          <p>{filePath}</p>
+        ) : (
+          <p>ここにファイルをドラッグ＆ドロップしてください</p>
+        )}
+        {errorMessage && (
+          <p className="text-red-500 text-center pt-2">{errorMessage}</p>
+        )}
+      </div>
     </div>
   );
 };
