@@ -1,14 +1,17 @@
+
+import { invoke } from '@tauri-apps/api/tauri';
 import React, { useState } from 'react';
 
 const FileDropZone = () => {
   const [filePath, setFilePath] = useState<string | null>(null);
 
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const file = event.dataTransfer.files[0];
     if (file) {
-      // ファイルパスをセット
-      setFilePath(file.path);
+      // Tauri API を使用してファイルパスを取得
+      const path = await invoke<string>('get_file_path', { fileName: file.name });
+      setFilePath(path);
     }
   };
 
