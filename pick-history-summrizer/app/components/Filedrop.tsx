@@ -1,28 +1,27 @@
-
-import { invoke } from '@tauri-apps/api/tauri';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
+import path from 'path';
 
 const FileDropZone = () => {
   const [filePath, setFilePath] = useState<string | null>(null);
 
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const file = event.dataTransfer.files[0];
-    if (file) {
-      // Tauri API を使用してファイルパスを取得
-      const path = await invoke<string>('get_file_path', { fileName: file.name });
-      setFilePath(path);
-    }
-  };
+  useEffect(() => {
+    // Tauri のファイルドロップイベントをリッスン
+    const unlisten = listen('tauri://file-drop', (event) => {
+      const paths = event.payload as string[];
+      if (paths && paths.length > 0) {
+        console.log('File dropped:', paths[0]);
+        setFilePath(paths[0]);  // ドロップされた最初のファイルパスを使用
+      }
+    });
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-  };
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   return (
     <div
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
       style={{
         border: '2px dashed #ccc',
         padding: '20px',
@@ -32,7 +31,7 @@ const FileDropZone = () => {
       {filePath ? (
         <p>ファイルパス: {filePath}</p>
       ) : (
-        <p>ここにファイルをドロップしてください</p>
+        <p>ここにファイルをドラッグ＆ドロップしてください</p>
       )}
     </div>
   );

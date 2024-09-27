@@ -2,9 +2,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 #[tauri::command]
-fn get_file_path(file_name: String) -> String {
+fn get_file_path(file_path: String) -> Result<String, String> {
   // 実際のパスの取得は、環境に応じたロジックを実装
-  format!("/path/to/your/files/{}", file_name)
+  if std::path::Path::new(&file_path).exists() {
+    Ok(file_path)
+  } else {
+    Err("ファイルが見つかりません".into())
+  }
+  
 }
 
 fn main() {
