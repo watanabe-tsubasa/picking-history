@@ -3,11 +3,14 @@ import FileDropZone from './Filedrop';
 import { listen } from '@tauri-apps/api/event';
 import { dirname, join } from '@tauri-apps/api/path';
 import { invoke } from '@tauri-apps/api';
+import { Loader2 } from 'lucide-react';
+import { toast, Toaster } from 'sonner';
 
 const FileHandler = () => {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [outputPath, setOutputPath] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
   const handleUploadButtonClick = async () => {
     try {
@@ -20,22 +23,35 @@ const FileHandler = () => {
 
   const validateFile = async (path: string) => {
     const extension = path.split('.').pop()?.toLowerCase();
-    if (extension === 'csv' || extension === 'xlsx') {
+    if (
+      // extension === 'csv' ||
+      extension === 'xlsx'
+    ) {
       setFilePath(path);
       const dir = await dirname(path as string);
       const resultPath = await join(dir, 'output.xlsx');
       setOutputPath(resultPath);
       setErrorMessage(null);
     } else {
-      setErrorMessage('対応しているファイル形式は CSV または XLSX です');
+      setErrorMessage('対応しているファイル形式は XLSX です');
       setFilePath(null);
     }
   };
 
   const handleOutputButtonClick = async () => {
-    console.log(filePath, outputPath)
-    return await invoke('process_excel', { inputFile: filePath, outputFile: outputPath });
-    ;
+    setIsGenerating(true);
+    try {
+      const res = await invoke('process_excel', { inputFile: filePath, outputFile: outputPath });
+      console.log(`res: ${res}`);
+      toast.success('ファイルの生成に成功しました')
+    } catch (error) {
+      console.error(error);
+      toast.error(`読み込むファイルを確認してください：${error}`)
+    } finally{
+      setIsGenerating(false);
+      setFilePath(null);
+      setOutputPath(null);
+    }
   }
 
   useEffect(() => {
@@ -65,12 +81,20 @@ const FileHandler = () => {
             アップロード
           </button>
           <button
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 min-w-44"
+            className={`rounded-full border border-solid border-transparent transition-colors flex items-center justify-center text-sm sm:text-base h-10 sm:h-12 px-4 min-w-44
+              ${filePath
+                ? 'bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc]'
+                : 'bg-[#ddd] text-[#aaa] cursor-not-allowed'}
+            `}
             onClick={handleOutputButtonClick}
             disabled={!filePath}
           >
-            ファイル出力
+            {!isGenerating
+              ? 'ファイル出力'
+              : <Loader2 className='animate-spin' />
+            }
           </button>
+          <Toaster duration={3000} />
         </div>
       </div>
     </div>

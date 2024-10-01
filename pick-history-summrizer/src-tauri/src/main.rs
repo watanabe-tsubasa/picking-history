@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod data_handler;
-
+mod barcode_handler;
 use::tauri::api::dialog::FileDialogBuilder;
 
 #[tauri::command]

@@ -1,3 +1,4 @@
+use crate::barcode_handler::process_barcode;
 use polars::prelude::*;
 use calamine::{open_workbook, Reader, Xlsx};
 // use std::fs::File;
@@ -6,9 +7,14 @@ use calamine::{open_workbook, Reader, Xlsx};
 pub fn process_excel(input_file: &str, output_file: &str) -> Result<(), String> {
   // println!("{}, {}", input_file, output_file);
   let mut excel: Xlsx<_> = open_workbook(input_file).unwrap();
-  let range = match excel.worksheet_range("注文商品") {
+  let sheet_names = excel.sheet_names().to_owned();
+  if sheet_names.is_empty() {
+    return Err("シートが存在していません".to_string());
+  }
+  let first_sheet = &sheet_names[0];
+  let range = match excel.worksheet_range(first_sheet) {
     Ok(range) => range,
-    Err(e) => panic!("Failed to read worksheet: {:?}", e),
+    Err(e) => return Err(format!("ファイルの読み込みに失敗しました: {:?}", e)),
   };
 
   let mut records: Vec<Vec<String>> = Vec::new();
@@ -49,9 +55,11 @@ pub fn process_excel(input_file: &str, output_file: &str) -> Result<(), String> 
     ])
     .filter(col("明細修正").eq(lit("有")))
     .collect()
-    .unwrap();
+    .map_err(|e| e.to_string())?;
   // println!("{:?}", df_processed);
 
+  process_barcode("jancode");
+  
   let mut xlsx_writer = polars_excel_writer::PolarsXlsxWriter::new();
   
   xlsx_writer.write_dataframe(&df_processed).map_err(|e| e.to_string())?;
