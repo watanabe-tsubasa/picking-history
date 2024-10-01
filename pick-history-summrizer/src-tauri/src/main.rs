@@ -17,8 +17,6 @@ async fn get_file_path() -> Result<String, String> {
   rx.recv().map_err(|_| "File selection cancelled".to_string())
 }
 
-
-
 fn main() {
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![
