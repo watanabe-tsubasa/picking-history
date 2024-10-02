@@ -1,5 +1,7 @@
 use crate::barcode_handler::process_barcode;
 use polars::prelude::*;
+use polars_excel_writer::PolarsXlsxWriter;
+use rust_xlsxwriter::{Image, Workbook};
 use calamine::{open_workbook, Reader, Xlsx};
 // use std::fs::File;
 
@@ -58,12 +60,38 @@ pub fn process_excel(input_file: &str, output_file: &str) -> Result<(), String> 
     .map_err(|e| e.to_string())?;
   // println!("{:?}", df_processed);
 
-  process_barcode("jancode");
+  let product_codes = df_processed.column("商品コード").map_err(|e| e.to_string())?;
+  let barcode_images: Vec<Option<String>> = vec![None; df_processed.height()];
+  let barcode_series = Series::new("バーコード".into(), barcode_images);
+  let df_with_barcode = df_processed.hstack(&[barcode_series]).map_err(|e| e.to_string())?;
+
+  let mut workbook = Workbook::new();
+  let mut worksheet = workbook.add_worksheet();
+
+  let mut xlsx_writer = PolarsXlsxWriter::new();
+  xlsx_writer.write_dataframe_to_worksheet(&df_with_barcode, &mut worksheet, 0, 0).map_err(|e| e.to_string())?;
+
+  for (i, code) in product_codes.iter().enumerate() {
+    let code_str = code.to_string();
+    let jancode = code_str.trim_matches('"');
+    if !jancode.is_ascii() {
+      println!("Skipping non-ASCII 商品コード: {}", jancode);
+      continue;
+    }
+    let image_height = 80; // 画像の高さ（ピクセル）
+    let (barcode_path, image_width) = process_barcode(&jancode, image_height)?;
+    let image = Image::new(&barcode_path).map_err(|e| e.to_string())?;
+    let width = df_processed.width() as u16;
+
+    worksheet.set_column_width(width, (image_width / 7) as f64).map_err(|e| e.to_string())?;
+    worksheet.set_row_height((i + 1) as u32, image_height as f64).map_err(|e| e.to_string())?;  
+    worksheet.insert_image((i + 1) as u32, width, &image).map_err(|e| e.to_string())?;
+
+    // barcode_pathの画像を削除
+    std::fs::remove_file(&barcode_path).map_err(|e| e.to_string())?;
+  }
   
-  let mut xlsx_writer = polars_excel_writer::PolarsXlsxWriter::new();
-  
-  xlsx_writer.write_dataframe(&df_processed).map_err(|e| e.to_string())?;
-  xlsx_writer.save(output_file).map_err(|e| e.to_string())?;
+  workbook.save(output_file).map_err(|e| e.to_string())?;
   
   // polars_excel_writer::ExcelWriter::new(&mut file).finish(&mut df).map_err(|e| e.to_string())?;
   // let mut file = File::create(output_file).map_err(|e| e.to_string())?;
